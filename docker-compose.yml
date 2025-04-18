@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongodb_container
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 5s
+      timeout: 10s
+      retries: 2
+    environment:
+      MONGO_INITDB_DATABASE: camp2016
+
+  flask-app:
+    build: .
+    container_name: flask_app_container
+    ports:
+      - "5001:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      FLASK_ENV: production
+      # - MONGO_HOST=mongo
+      # - MONGO_PORT=27017
+    restart: on-failure
+
+volumes:
+  mongo-data:

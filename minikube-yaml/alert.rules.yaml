@@ -1,0 +1,38 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kubernetes-pod-alerts
+  namespace: default
+spec:
+  groups:
+  - name: pod-alerts
+    rules:
+    # Alert for CrashLoopBackOff
+    - alert: PodCrashLoopBackOff
+      expr: kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"} > 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is in CrashLoopBackOff"
+        description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has been in CrashLoopBackOff for more than 5 minutes."
+
+    # Alert for Pod Deletion
+    - alert: PodDeleted
+      expr: absent(kube_pod_info{namespace!~"kube-system|monitoring"})
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pod in namespace {{ $labels.namespace }} has been deleted"
+        description: "A pod that was previously present is no longer detected in namespace {{ $labels.namespace }}."
+
+    # Alert for ImagePull Errors
+    - alert: ImagePullError
+      expr: kube_pod_container_status_waiting_reason{reason=~"ErrImagePull|ImagePullBackOff"} > 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has an ImagePull error"
+        description: "Container {{ $labels.container }} in pod {{ $labels.pod }} failed to pull its image for more than 5 minutes."
